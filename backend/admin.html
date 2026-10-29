@@ -1,0 +1,432 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital India - Admin Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #063b70;
+            color: white;
+            padding: 22px 30px;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 25px;
+        }
+
+        header p {
+            margin: 0;
+            color: #dbeafe;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .summary {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 3px 12px #0000000d;
+        }
+
+        .summary h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        #total {
+            font-size: 34px;
+            font-weight: bold;
+            color: #0759a6;
+        }
+
+        .messages {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            overflow-x: auto;
+            box-shadow: 0 3px 12px #0000000d;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .toolbar h2 {
+            margin: 0;
+        }
+
+        button {
+            background: #0759a6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 11px 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #063b70;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 650px;
+        }
+
+        th, td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-wrap: anywhere;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #063b70;
+        }
+
+        #status {
+            margin: 12px 0;
+            color: #475569;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 20px;
+            }
+
+            main {
+                padding: 0 12px;
+                margin-top: 18px;
+            }
+
+            .messages, .summary {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    
+<section id="loginSection" style="max-width:420px; margin:40px auto; padding:25px; background:white; border-radius:12px; box-shadow:0 3px 12px #00000015;">
+    <h2>Admin Login</h2>
+
+    <form id="loginForm">
+        <label for="username">Username</label>
+        <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+            style="display:block; width:100%; padding:12px; margin:8px 0 18px;"
+        >
+
+        <label for="password">Password</label>
+        <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            style="display:block; width:100%; padding:12px; margin:8px 0 18px;"
+        >
+
+        <button type="submit">Login</button>
+        <p id="loginStatus" role="status"></p>
+    </form>
+</section>
+<div id="dashboardSection" hidden>
+    <header>
+        <h1>Digital India</h1>
+        <p>Admin Dashboard | Contact Messages</p>
+    </header>
+    
+<button id="logoutBtn" type="button" onclick="logoutAdmin()">
+  Logout
+</button>
+
+
+    <main>
+        <section class="summary">
+            <h2>Total Contact Messages</h2>
+            <div id="total">0</div>
+            <p>Messages received from your website</p>
+        </section>
+
+        <section class="messages">
+            <div class="toolbar">
+                <h2>Contact Messages</h2>
+                <input
+  type="text"
+  id="searchMessages"
+  placeholder="Search by name, email or message..."
+/>
+
+<p>Total Messages: <span id="totalMessages">0</span></p>
+                <button onclick="loadMessages()">Refresh Messages</button>
+            </div>
+
+            <p id="status" role="status">Loading messages...</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Message</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="messageList"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        Digital India Project
+    </footer>
+
+    <script>
+
+let allContacts = [];
+
+async function loadMessages() {
+    const status = document.getElementById("status");
+    const list = document.getElementById("messageList");
+
+    status.textContent = "Loading messages...";
+    list.replaceChildren();
+
+    try {
+        const response = await fetch("/api/contact", {
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            throw new Error("Could not load messages");
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !Array.isArray(data.contacts)) {
+            throw new Error("Invalid server response");
+        }
+
+        allContacts = data.contacts;
+
+        document.getElementById("total").textContent =
+            allContacts.length;
+
+        document.getElementById("totalMessages").textContent =
+            allContacts.length;
+
+        renderMessages();
+
+    } catch (error) {
+        status.textContent =
+            "Could not load messages. Check the backend.";
+        console.error(error);
+    }
+}
+
+function renderMessages() {
+    const list = document.getElementById("messageList");
+    const status = document.getElementById("status");
+    const search = document.getElementById("searchMessages")
+        .value.trim().toLowerCase();
+
+    list.replaceChildren();
+
+    const filtered = allContacts.filter(contact =>
+        [
+            contact.name,
+            contact.email,
+            contact.message
+        ].some(value =>
+            String(value ?? "").toLowerCase().includes(search)
+        )
+    );
+
+    if (filtered.length === 0) {
+        status.textContent = search
+            ? "No matching messages found."
+            : "No contact messages found.";
+        return;
+    }
+
+    filtered.forEach(contact => {
+        const row = document.createElement("tr");
+
+        const values = [
+            contact.id,
+            contact.name,
+            contact.email,
+            contact.message,
+            contact.created_at
+                ? new Date(contact.created_at).toLocaleString()
+                : "-"
+        ];
+
+        values.forEach(value => {
+            const cell = document.createElement("td");
+            cell.textContent = value ?? "";
+            row.appendChild(cell);
+        });
+
+        const actionCell = document.createElement("td");
+        const deleteButton = document.createElement("button");
+
+        deleteButton.textContent = "Delete";
+        deleteButton.style.background = "#dc2626";
+
+        deleteButton.addEventListener("click", async () => {
+            if (!confirm("Delete this contact message?")) {
+                return;
+            }
+
+            deleteButton.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/contact/${encodeURIComponent(contact.id)}`,
+                    {
+                        method: "DELETE",
+                        credentials: "same-origin"
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || result.success === false) {
+                    throw new Error(
+                        result.message || "Delete failed"
+                    );
+                }
+
+                await loadMessages();
+
+            } catch (error) {
+                alert("Could not delete message: " + error.message);
+                deleteButton.disabled = false;
+            }
+        });
+
+        actionCell.appendChild(deleteButton);
+        row.appendChild(actionCell);
+        list.appendChild(row);
+    });
+
+    status.textContent = "Messages loaded successfully!";
+}
+
+// Live search
+document.getElementById("searchMessages")
+    .addEventListener("input", renderMessages);
+
+// Admin login
+document.getElementById("loginForm")
+    .addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const status = document.getElementById("loginStatus");
+        status.textContent = "Checking login...";
+
+        const username =
+            document.getElementById("username").value.trim();
+        const password =
+            document.getElementById("password").value;
+
+        try {
+            const response = await fetch("/api/admin/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                status.textContent =
+                    data.message || "Login failed.";
+                return;
+            }
+
+            document.getElementById("loginSection").hidden = true;
+            document.getElementById("dashboardSection").hidden = false;
+
+            document.getElementById("loginForm").reset();
+
+            await loadMessages();
+
+        } catch (error) {
+            status.textContent =
+                "Server connection failed. Please try again.";
+            console.error(error);
+        }
+    });
+    
+async function logoutAdmin() {
+  try {
+    const response = await fetch("/api/admin/logout", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    if (response.ok) {
+      document.getElementById("dashboardSection").hidden = true;
+      document.getElementById("loginSection").hidden = false;
+      document.getElementById("loginStatus").textContent =
+        "Logged out successfully.";
+    } else {
+      alert("Logout failed. Please try again.");
+    }
+  } catch (error) {
+    console.error("Logout error:", error);
+    alert("Server connection failed.");
+  }
+}
+
+
+    </script>
+    </div>
+</body>
+</html>
