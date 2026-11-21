@@ -14,7 +14,7 @@ function Contact() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/contact",
+        "https://digital-india-website-backend.onrender.com/api/contact",
         {
           method: "POST",
           headers: {
